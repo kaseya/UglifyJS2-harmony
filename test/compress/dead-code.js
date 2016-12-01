@@ -87,3 +87,142 @@ dead_code_constant_boolean_should_warn_more: {
         var moo;
     }
 }
+
+dead_code_block_decls_die: {
+    options = {
+        dead_code    : true,
+        conditionals : true,
+        booleans     : true,
+        evaluate     : true
+    };
+    input: {
+        if (0) {
+            let foo = 6;
+            const bar = 12;
+            class Baz {};
+            var qux;
+        }
+        console.log(foo, bar, Baz);
+    }
+    expect: {
+        var qux;
+        console.log(foo, bar, Baz);
+    }
+}
+
+dead_code_const_declaration: {
+    options = {
+        dead_code    : true,
+        loops        : true,
+        booleans     : true,
+        conditionals : true,
+        evaluate     : true
+    };
+    input: {
+        var unused;
+        const CONST_FOO = false;
+        if (CONST_FOO) {
+            console.log("unreachable");
+            var moo;
+            function bar() {}
+        }
+    }
+    expect: {
+        var unused;
+        const CONST_FOO = !1;
+        var moo;
+        function bar() {}
+    }
+}
+
+dead_code_const_annotation: {
+    options = {
+        dead_code    : true,
+        loops        : true,
+        booleans     : true,
+        conditionals : true,
+        evaluate     : true
+    };
+    input: {
+        var unused;
+        /** @const */ var CONST_FOO_ANN = false;
+        if (CONST_FOO_ANN) {
+            console.log("unreachable");
+            var moo;
+            function bar() {}
+        }
+    }
+    expect: {
+        var unused;
+        var CONST_FOO_ANN = !1;
+        var moo;
+        function bar() {}
+    }
+}
+
+dead_code_const_annotation_regex: {
+    options = {
+        dead_code    : true,
+        loops        : true,
+        booleans     : true,
+        conditionals : true,
+        evaluate     : true
+    };
+    input: {
+        var unused;
+        // @constraint this shouldn't be a constant
+        var CONST_FOO_ANN = false;
+        if (CONST_FOO_ANN) {
+            console.log("reachable");
+        }
+    }
+    expect: {
+        var unused;
+        var CONST_FOO_ANN = !1;
+        CONST_FOO_ANN && console.log('reachable');
+    }
+}
+
+dead_code_const_annotation_complex_scope: {
+    options = {
+        dead_code    : true,
+        loops        : true,
+        booleans     : true,
+        conditionals : true,
+        evaluate     : true
+    };
+    input: {
+        var unused_var;
+        /** @const */ var test = 'test';
+        // @const
+        var CONST_FOO_ANN = false;
+        var unused_var_2;
+        if (CONST_FOO_ANN) {
+            console.log("unreachable");
+            var moo;
+            function bar() {}
+        }
+        if (test === 'test') {
+            var beef = 'good';
+            /** @const */ var meat = 'beef';
+            var pork = 'bad';
+            if (meat === 'pork') {
+                console.log('also unreachable');
+            } else if (pork === 'good') {
+                console.log('reached, not const');
+            }
+        }
+    }
+    expect: {
+        var unused_var;
+        var test = 'test';
+        var CONST_FOO_ANN = !1;
+        var unused_var_2;
+        var moo;
+        function bar() {}
+        var beef = 'good';
+        var meat = 'beef';
+        var pork = 'bad';
+        'good' === pork && console.log('reached, not const');
+    }
+}

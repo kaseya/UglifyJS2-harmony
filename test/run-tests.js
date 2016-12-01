@@ -1,5 +1,7 @@
 #! /usr/bin/env node
 
+global.UGLIFY_DEBUG = true;
+
 var U = require("../tools/node");
 var path = require("path");
 var fs = require("fs");
@@ -16,6 +18,9 @@ if (failures) {
     process.exit(1);
 }
 
+var mocha_tests = require("./mocha.js");
+mocha_tests();
+
 var run_sourcemaps_tests = require('./sourcemaps');
 run_sourcemaps_tests();
 
@@ -24,10 +29,6 @@ var run_ast_conversion_tests = require("./mozilla-ast");
 run_ast_conversion_tests({
     iterations: 1000
 });
-
-var run_parser_tests = require('./parser.js');
-
-run_parser_tests();
 
 /* -----[ utils ]----- */
 
@@ -86,9 +87,18 @@ function run_compress_tests() {
         log_start_file(file);
         function test_case(test) {
             log_test(test.name);
+            U.base54.reset();
             var options = U.defaults(test.options, {
                 warnings: false
             });
+            var warnings_emitted = [];
+            var original_warn_function = U.AST_Node.warn_function;
+            if (test.expect_warnings) {
+                U.AST_Node.warn_function = function(text) {
+                    warnings_emitted.push("WARN: " + text);
+                };
+                options.warnings = true;
+            }
             var cmp = new U.Compressor(options, true);
             var output_options = test.beautify || {};
             var expect;
@@ -98,13 +108,18 @@ function run_compress_tests() {
                 expect = test.expect_exact;
             }
             var input = as_toplevel(test.input);
-            var input_code = make_code(test.input, { beautify: true });
+            var input_code = make_code(test.input, {
+                beautify: true,
+                quote_style: 3,
+                keep_quoted_props: true
+            });
             if (test.mangle_props) {
                 input = U.mangle_properties(input, test.mangle_props);
             }
-            var output = input.transform(cmp);
-            output.figure_out_scope();
+            var output = cmp.compress(input);
+            output.figure_out_scope(test.mangle);
             if (test.mangle) {
+                output.compute_char_frequency(test.mangle);
                 output.mangle_names(test.mangle);
             }
             output = make_code(output, output_options);
@@ -116,6 +131,40 @@ function run_compress_tests() {
                 });
                 failures++;
                 failed_files[file] = 1;
+            }
+            else {
+                // expect == output
+                try {
+                    var reparsed_ast = U.parse(output);
+                } catch (ex) {
+                    log("!!! Test matched expected result but cannot parse output\n---INPUT---\n{input}\n---OUTPUT---\n{output}\n--REPARSE ERROR--\n{error}\n\n", {
+                        input: input_code,
+                        output: output,
+                        error: ex.toString(),
+                    });
+                    failures++;
+                    failed_files[file] = 1;
+                }
+                if (test.expect_warnings) {
+                    U.AST_Node.warn_function = original_warn_function;
+                    var expected_warnings = make_code(test.expect_warnings, {
+                        beautify: false,
+                        quote_style: 2, // force double quote to match JSON
+                    });
+                    warnings_emitted = warnings_emitted.map(function(input) {
+                      return input.split(process.cwd() + path.sep).join("").split(path.sep).join("/");
+                    });
+                    var actual_warnings = JSON.stringify(warnings_emitted);
+                    if (expected_warnings != actual_warnings) {
+                        log("!!! failed\n---INPUT---\n{input}\n---EXPECTED WARNINGS---\n{expected_warnings}\n---ACTUAL WARNINGS---\n{actual_warnings}\n\n", {
+                            input: input_code,
+                            expected_warnings: expected_warnings,
+                            actual_warnings: actual_warnings,
+                        });
+                        failures++;
+                        failed_files[file] = 1;
+                    }
+                }
             }
         }
         var tests = parse_test(path.resolve(dir, file));
@@ -130,9 +179,16 @@ function run_compress_tests() {
 
 function parse_test(file) {
     var script = fs.readFileSync(file, "utf8");
-    var ast = U.parse(script, {
-        filename: file
-    });
+    // TODO try/catch can be removed after fixing https://github.com/mishoo/UglifyJS2/issues/348
+    try {
+        var ast = U.parse(script, {
+            filename: file
+        });
+    } catch (e) {
+        console.log("Caught error while parsing tests in " + file + "\n");
+        console.log(e);
+        throw e;
+    }
     var tests = {};
     var tw = new U.TreeWalker(function(node, descend){
         if (node instanceof U.AST_LabeledStatement
@@ -168,7 +224,7 @@ function parse_test(file) {
             }
             if (node instanceof U.AST_LabeledStatement) {
                 assert.ok(
-                    node.label.name == "input" || node.label.name == "expect" || node.label.name == "expect_exact",
+                    ["input", "expect", "expect_exact", "expect_warnings"].indexOf(node.label.name) >= 0,
                     tmpl("Unsupported label {name} [{line},{col}]", {
                         name: node.label.name,
                         line: node.label.start.line,

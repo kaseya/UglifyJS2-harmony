@@ -1,17 +1,3 @@
-arrow_functions: {
-    input: {
-        (a) => b;  // 1 args
-        (a, b) => c;  // n args
-        () => b;  // 0 args
-        (a) => (b) => c;  // func returns func returns func
-        (a) => ((b) => c);  // So these parens are dropped
-        () => (b,c) => d;  // func returns func returns func
-        a=>{return b;}
-        a => 'lel';  // Dropping the parens
-    }
-    expect_exact: "a=>b;(a,b)=>c;()=>b;a=>b=>c;a=>b=>c;()=>(b,c)=>d;a=>{return b};a=>\"lel\";"
-}
-
 arrow_function_parens: {
     input: {
         something && (() => {});
@@ -25,190 +11,14 @@ arrow_function_parens_2: {
     expect_exact: "(()=>null)();"
 }
 
-regression_arrow_functions_and_hoist: {
-    options = {
-        hoist_vars: true,
-        hoist_funs: true
-    }
-    input: {
-        (a) => b;
-    }
-    expect_exact: "a=>b;"
-}
-
-regression_assign_arrow_functions: {
-    input: {
-        oninstall = e => false;
-        oninstall = () => false;
-    }
-    expect: {
-        oninstall=e=>false;
-        oninstall=()=>false;
-    }
-}
-
-computed_property_names: {
-    input: {
-        obj({ ["x" + "x"]: 6 });
-    }
-    expect_exact: 'obj({["x"+"x"]:6});'
-}
-
 typeof_arrow_functions: {
     options = {
         evaluate: true
     }
     input: {
-        typeof (x) => null;
+        var foo = typeof (x) => null;
     }
-    expect_exact: "\"function\";"
-}
-
-template_strings: {
-    input: {
-        ``;
-        `xx\`x`;
-        `${ foo + 2 }`;
-        ` foo ${ bar + `baz ${ qux }` }`;
-    }
-    expect_exact: "``;`xx\\`x`;`${foo+2}`;` foo ${bar+`baz ${qux}`}`;";
-}
-
-template_string_prefixes: {
-    input: {
-        String.raw`foo`;
-        foo `bar`;
-    }
-    expect_exact: "String.raw`foo`;foo`bar`;";
-}
-
-destructuring_arguments: {
-    input: {
-        (function ( a ) { });
-        (function ( [ a ] ) { });
-        (function ( [ a, b ] ) { });
-        (function ( [ [ a ] ] ) { });
-        (function ( [ [ a, b ] ] ) { });
-        (function ( [ a, [ b ] ] ) { });
-        (function ( [ [ b ], a ] ) { });
-
-        (function ( { a } ) { });
-        (function ( { a, b } ) { });
-
-        (function ( [ { a } ] ) { });
-        (function ( [ { a, b } ] ) { });
-        (function ( [ a, { b } ] ) { });
-        (function ( [ { b }, a ] ) { });
-
-        ( [ a ] ) => { };
-        ( [ a, b ] ) => { };
-
-        ( { a } ) => { };
-        ( { a, b, c, d, e } ) => { };
-
-        ( [ a ] ) => b;
-        ( [ a, b ] ) => c;
-
-        ( { a } ) => b;
-        ( { a, b } ) => c;
-    }
-    expect: {
-        (function(a){});
-        (function([a]){});
-        (function([a,b]){});
-        (function([[a]]){});
-        (function([[a,b]]){});
-        (function([a,[b]]){});
-        (function([[b],a]){});
-
-        (function({a}){});
-        (function({a,b}){});
-
-        (function([{a}]){});
-        (function([{a,b}]){});
-        (function([a,{b}]){});
-        (function([{b},a]){});
-
-        ([a])=>{};
-        ([a,b])=>{};
-
-        ({a})=>{};
-        ({a,b,c,d,e})=>{};
-
-        ([a])=>b;
-        ([a,b])=>c;
-
-        ({a})=>b;
-        ({a,b})=>c;
-    }
-}
-
-default_arguments: {
-    input: {
-        function x(a = 6) { }
-        function x(a = (6 + 5)) { }
-        function x({ foo } = {}, [ bar ] = [ 1 ]) { }
-    }
-    expect_exact: "function x(a=6){}function x(a=6+5){}function x({foo}={},[bar]=[1]){}"
-}
-
-default_values_in_destructurings: {
-    input: {
-        function x({a=(4), b}) {}
-        function x([b, c=(12)]) {}
-        var { x = (6), y } = x;
-        var [ x, y = (6) ] = x;
-    }
-    expect_exact: "function x({a=4,b}){}function x([b,c=12]){}var{x=6,y}=x;var[x,y=6]=x;"
-}
-
-concise_methods: {
-    input: {
-        x = {
-            foo(a, b) {
-                return x;
-            }
-        }
-        y = {
-            foo([{a}]) {
-                return a;
-            },
-            bar(){}
-        }
-    }
-    expect_exact: "x={foo(a,b){return x}};y={foo([{a}]){return a},bar(){}};"
-}
-
-concise_methods_and_mangle_props: {
-    mangle_props = {
-        regex: /_/
-    };
-    input: {
-        function x() {
-            obj = {
-                _foo() { return 1; }
-            }
-        }
-    }
-    expect: {
-        function x() {
-            obj = {
-                a() { return 1; }
-            }
-        }
-    }
-}
-
-concise_methods_and_keyword_names: {
-    input: {
-        x = {
-            catch() {},
-            throw() {}
-        }
-    }
-    expect: {
-        x={catch(){},throw(){}};
-    }
+    expect_exact: "var foo=\"function\";"
 }
 
 classes: {
@@ -257,8 +67,8 @@ class_name_can_be_mangled: {
     expect: {
         function x() {
             class a { }
-            var b = a
-            var c = class a {}
+            var n = a
+            var r = class a {}
         }
     }
 }
@@ -279,6 +89,67 @@ class_name_can_be_preserved: {
             class Foo {};
         }
     }
+}
+
+classes_can_have_generators: {
+    input: {
+        class Foo {
+            *bar() {}
+            static *baz() {}
+        }
+    }
+    expect: {
+        class Foo {
+            *bar() {}
+            static *baz() {}
+        }
+    }
+}
+
+classes_can_have_computed_generators: {
+    input: {
+        class C4 {
+            *['constructor']() {}
+        }
+    }
+    expect: {
+        class C4 {
+            *['constructor']() {}
+        }
+    }
+}
+
+classes_can_have_computed_static: {
+    input: {
+        class C4 {
+            static ['constructor']() {}
+        }
+    }
+    expect: {
+        class C4 {
+            static ['constructor']() {}
+        }
+    }
+}
+
+class_methods_and_getters_with_keep_quoted_props_enabled: {
+    beautify = {
+        quote_style: 3,
+        keep_quoted_props: true,
+    }
+    input: {
+        class clss {
+            a() {}
+            "b"() {}
+            get c() { return "c"}
+            get "d"() { return "d"}
+            set e(a) { doSomething(a); }
+            set 'f'(a) { doSomething(b); }
+            static g() {}
+            static "h"() {}
+        }
+    }
+    expect_exact: 'class clss{a(){}"b"(){}get c(){return"c"}get"d"(){return"d"}set e(a){doSomething(a)}set\'f\'(a){doSomething(b)}static g(){}static"h"(){}}'
 }
 
 new_target: {
@@ -302,6 +173,78 @@ number_literals: {
         9;
         9;
         9;
+    }
+}
+
+import_statement: {
+    input: {
+        import "mod-name";
+        import Foo from "bar";
+        import { Bar, Baz } from 'lel';
+        import Bar, { Foo } from 'lel';
+        import { Bar as kex, Baz as food } from 'lel';
+    }
+    expect_exact: "import\"mod-name\";import Foo from\"bar\";import{Bar,Baz}from\"lel\";import Bar,{Foo}from\"lel\";import{Bar as kex,Baz as food}from\"lel\";"
+}
+
+export_statement: {
+    input: {
+        export default 1;
+        export var foo = 4;
+        export let foo = 6;
+        export const foo = 6;
+        export function foo() {};
+        export class foo { };
+    }
+    expect_exact: "export default 1;export var foo=4;export let foo=6;export const foo=6;export function foo(){};export class foo{};"
+}
+
+import_statement_mangling: {
+    mangle = { };
+    input: {
+        import Foo from "foo";
+        import Bar, {Food} from "lel";
+        import {What as Whatever} from "lel";
+        Foo();
+        Bar();
+        Food();
+        Whatever();
+    }
+    expect: {
+        import l from "foo";
+        import e, {Food as o} from "lel";
+        import {What as f} from "lel";
+        l();
+        e();
+        o();
+        f();
+    }
+}
+
+export_statement_mangling: {
+    mangle = { };
+    input: {
+        export var foo = 6;
+        export function bar() { }
+        export class Baz { }
+        bar(foo, Baz)
+    }
+    expect: {
+        export var foo = 6;
+        export function bar() { }
+        export class Baz { }
+        bar(foo, Baz)
+    }
+}
+
+// https://github.com/mishoo/UglifyJS2/issues/1021
+regression_for_of_const: {
+    input: {
+        for (const x of y) {}
+        for (const x in y) {}
+    }
+    expect: {
+        for (const x of y);for (const x in y);
     }
 }
 
@@ -331,4 +274,15 @@ regression_cannot_use_of: {
         x.of;
         foo();  /* Label statement missing? No prob. */
     }
+}
+
+fat_arrow_as_param: {
+    input: {
+        foo(x => x);
+        foo(x => x, y => y);
+
+        foo(x => (x, x));
+        foo(x => (x, x), y => (y, y));
+    }
+    expect_exact: "foo(x=>x);foo(x=>x,y=>y);foo(x=>(x,x));foo(x=>(x,x),y=>(y,y));"
 }
