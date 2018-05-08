@@ -1,7 +1,5 @@
 UglifyJS 2
 ==========
-[![Build Status](https://travis-ci.org/mishoo/UglifyJS2.svg)](https://travis-ci.org/mishoo/UglifyJS2)
-
 UglifyJS is a JavaScript parser, minifier, compressor or beautifier toolkit.
 
 This page documents the command line utility.  For
@@ -26,7 +24,7 @@ From NPM for programmatic use:
 
 From Git:
 
-    git clone git://github.com/mishoo/UglifyJS2.git
+    git clone git://github.com/kaseya/UglifyJS2.git
     cd UglifyJS2
     npm link .
 
